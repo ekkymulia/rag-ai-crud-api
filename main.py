@@ -1,3 +1,4 @@
+import json
 import os
 import ssl
 from datetime import datetime
@@ -74,8 +75,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def chat_response(param, sessionKey):
+def chat_response(param, sessionKey, queryDetail):
     global full_path_most_recent
+
     embeddings = OpenAIEmbeddings(openai_api_key=os.environ.get('OPENAI_API_KEY'))
     persist_directory = 'chroma_db'
 
@@ -119,6 +121,7 @@ def chat_response(param, sessionKey):
     # )
 
 
+
     # prompt template
     from langchain.prompts.chat import (
         ChatPromptTemplate,
@@ -129,14 +132,39 @@ def chat_response(param, sessionKey):
     from langchain.prompts import PromptTemplate
 
     sys_prompt: PromptTemplate = PromptTemplate(
-        input_variables=["query"],
-        template="""kamu adalah seorang assisten help center di ipb university, yang membantu para civitas ipb. 
-        Berikanlah respon jawaban yang benar, sopan dan membantu. Terus tawarkan user adakah yang bisa dibantu 
-        kembali, jika diskusi dengan user tidak mencapai titik temu, tawarkanlah bantuan untuk diarahkan agar 
-        berbicara langsung dengan customer service"""
+        input_variables=[],
+        template="""kamu seorang ai chatbot assisten help center di ipb university (institut pertanian bogor), 
+        yang membantu para civitas ipb dengan suka hati dan sangatlah ramah. 
+        Bantulah mereka dengan memberikan respon jawaban yang selalu benar, sopan dan membantu. Terus tawarkan ke 
+        para civitas ipb 
+        adakah 
+        yang 
+        bisa dibantu 
+        kembali. Dan jika semisalnya diskusi dengan user tidak mencapai titik temu, tawarkanlah bantuan untuk diarahkan 
+        agar 
+        berbicara langsung dengan pihak manusia asli yang bekerja di help center"""
     )
 
     system_message_prompt = SystemMessagePromptTemplate(prompt=sys_prompt)
+
+    judul = queryDetail['judul']
+    deskripsi = queryDetail['deskripsi']
+    topik = queryDetail['topik']
+    nama = queryDetail['nama']
+
+    sys_prompt2: PromptTemplate = PromptTemplate(
+        input_variables=["judul", "deskripsi", "topik", "nama"],
+        template=f"""
+            User ini bernama: {nama}
+            Memiliki pengaduan berjudul: {judul}
+            Deskripsi pengaduannya adalah: {deskripsi}
+            Topik dari pengaduan tersebut ialah: {topik}
+            Selalu jawablah dengan menggunakan bahasa indonesia!
+        """
+    )
+
+    system_message_prompt2 = SystemMessagePromptTemplate(prompt=sys_prompt2)
+
 
     student_prompt: PromptTemplate = PromptTemplate(
         input_variables=["query"],
@@ -145,7 +173,7 @@ def chat_response(param, sessionKey):
     student_message_prompt = HumanMessagePromptTemplate(prompt=student_prompt)
 
     chat_prompt = ChatPromptTemplate.from_messages(
-        [system_message_prompt, student_message_prompt])
+        [system_message_prompt, system_message_prompt2, student_message_prompt])
 
     chat_prompt_format = chat_prompt.format_messages(
         query=query,
@@ -229,7 +257,7 @@ async def root(request: Request):
     print(request_param)
 
     # Assuming `chat_response` is a function that processes the request_param
-    res = chat_response(request_param['question'], request_param['sessionKey'])
+    res = chat_response(request_param['question'], request_param['sessionKey'], request_param['queryDetail'])
     print(res)
 
     return res
