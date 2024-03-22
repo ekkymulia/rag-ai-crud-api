@@ -36,7 +36,7 @@ training_material_folder = os.getcwd() + "/training_data"
 persist_directory = os.getcwd() + '/chroma_db'
 
 os.environ['DATABASE_URL'] = "postgresql://llm:llm@localhost/llm2"
-os.environ['OPENAI_API_KEY'] = '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'
+os.environ['OPENAI_API_KEY'] = ''
 
 database = Database(os.environ.get('DATABASE_URL'))
 
@@ -85,7 +85,7 @@ def chat_response(param, sessionKey, queryDetail):
 
     # Filter only files with a specific naming pattern (assuming they are named as dates in string format)
     date_files = [file for file in all_files if
-                  file.isdigit()]  # You may need to adjust this depending on your naming convention
+                  file.isdigit()]  
 
     most_recent_file = max(date_files, key=int)
     full_path_most_recent = persist_directory + '/' + most_recent_file
@@ -97,10 +97,6 @@ def chat_response(param, sessionKey, queryDetail):
 
     query = f"{param}"
     retrieval_chain = RetrievalQA.from_chain_type(llm, chain_type="stuff", retriever=new_db.as_retriever())
-    # res = retrieval_chain.invoke(query)
-
-    # connection_string = ("mongodb+srv://llmuser:Llm2805200431052004@cluster0.k6dosmb.mongodb.net/?retryWrites=true&w"
-    #                      "=majority&appName=Cluster0")
 
     chat_history =  PostgresChatMessageHistory(
         connection_string=os.environ.get('DATABASE_URL'),
@@ -228,7 +224,7 @@ async def move_to_train(unique_filename):
             raise HTTPException(status_code=404, detail=f"File '{unique_filename}' not found in public folder.")
 
     except Exception as e:
-        # Handle exceptions here
+        # Handle exceptions
         raise HTTPException(status_code=500, detail=str(e))
 
 async def move_to_public(unique_filename):
@@ -247,7 +243,7 @@ async def move_to_public(unique_filename):
             raise HTTPException(status_code=404, detail=f"File '{unique_filename}' not found in public folder.")
 
     except Exception as e:
-        # Handle exceptions here
+        # Handle exceptions
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/")
@@ -256,7 +252,6 @@ async def root(request: Request):
     request_param = await request.json()
     print(request_param)
 
-    # Assuming `chat_response` is a function that processes the request_param
     res = chat_response(request_param['question'], request_param['sessionKey'], request_param['queryDetail'])
     print(res)
 
@@ -291,7 +286,7 @@ async def add_parameter(file: UploadFile):
         return {"message": "File berhasil diinput", "status_code": 201, "success": True}
 
     except Exception as e:
-        # Handle other exceptions here
+        # Handle other exceptions
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/parameters")
@@ -303,7 +298,7 @@ async def get_parameter():
         return parameters
 
     except Exception as e:
-        # Handle other exceptions here
+        # Handle other exceptions
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -346,7 +341,7 @@ async def activate_parameter(request: Request):
             return f"File {parameter['original_filename']} Berhasil dihapus dari folder training"
 
     except Exception as e:
-        # Handle other exceptions here
+        # Handle other exceptions
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -399,7 +394,7 @@ async def train_model():
 
        return f"Training Model Berhasil"
    except Exception as e:
-        # Handle other exceptions here
+        # Handle other exceptions
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/training-history")
@@ -411,13 +406,12 @@ async def training_history():
         return parameters
 
     except Exception as e:
-        # Handle other exceptions here
+        # Handle other exceptions
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/delete-file/{file_id}")
 async def delete_file(file_id: int):
     try:
-        # Use the select query without passing a list to select method
         query = files_table.select().where(files_table.c.id == file_id)
         result = await database.fetch_one(query)
 
@@ -431,13 +425,11 @@ async def delete_file(file_id: int):
 
             if os.path.exists(file_path):
                 try:
-                    # Use a context manager to open and close the file
                     with open(file_path, 'rb'):
                         os.remove(file_path)
                 except Exception as delete_error:
                     raise HTTPException(status_code=500, detail=f"Error deleting file: {str(delete_error)}")
 
-                # Use the delete query without passing a list to where method
                 delete_query = files_table.delete().where(files_table.c.id == file_id)
                 await database.execute(delete_query)
 
@@ -448,11 +440,10 @@ async def delete_file(file_id: int):
         raise HTTPException(status_code=404, detail="File ID not found")
 
     except HTTPException:
-        # Re-raise HTTPExceptions to let FastAPI handle them
         raise
 
     except Exception as e:
-        # Handle other exceptions here
+        # Handle other exceptions
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.on_event("startup")
